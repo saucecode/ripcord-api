@@ -112,6 +112,16 @@ class DiscordClient:
 			data = req.json()
 			return data
 		return req.text
+	
+	def send_start_typing(self, channelid : str):
+		""" Sends a signal to start typing to a specific channel. """
+		
+		request_url = 'https://discordapp.com/api/v6/channels/{}/typing'.format(channelid)
+		req = requests.post(request_url, headers={**self.headers, 'Authorization':self.token})
+		if req.status_code == 204:
+			return True
+		self.debug = req
+		return False
 
 
 if __name__ == '__main__':
@@ -182,4 +192,7 @@ if __name__ == '__main__':
 		{"op":4,"d":{"guild_id":None,"channel_id":None,"self_mute":True,"self_deaf":False,"self_video":False}}
 	))
 	
-	print(client.send_message('181226314810916865', 'Hello, world!'))
+	
+	print(client.send_start_typing('304959901376053248'))
+	time.sleep(1)
+	print(client.send_message('304959901376053248', 'Hello, world!'))
