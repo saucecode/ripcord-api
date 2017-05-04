@@ -99,6 +99,20 @@ class DiscordClient:
 		# call the callback function when receiving a packet
 		self.ws_recv_callback = callback
 
+	def send_message(self, channelid : str, message : str, tts=False, nonce="123"):
+		""" Sends a message to a specific channel. """
+		
+		data = json.dumps(
+			{"content": message, "tts":tts, "nonce": nonce}
+		)
+		
+		request_url = 'https://discordapp.com/api/v6/channels/{}/messages'.format(channelid)
+		req = requests.post(request_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		if req.status_code == 200:
+			data = req.json()
+			return data
+		return req.text
+
 
 if __name__ == '__main__':
 	client = DiscordClient()
@@ -108,6 +122,7 @@ if __name__ == '__main__':
 
 	# do login
 	print(client.login( email, password ))
+	print(client.debug.text)
 	print(client.token)
 
 	# download @me data
@@ -166,3 +181,5 @@ if __name__ == '__main__':
 	client.websocket_send(json.dumps(
 		{"op":4,"d":{"guild_id":None,"channel_id":None,"self_mute":True,"self_deaf":False,"self_video":False}}
 	))
+	
+	print(client.send_message('181226314810916865', 'Hello, world!'))
