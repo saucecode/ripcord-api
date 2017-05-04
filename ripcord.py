@@ -142,7 +142,19 @@ class DiscordClient:
 					except:
 						print('RECEIVED %s\n' % read)
 
-					self.ws_recv_callback(read)
+					self.message_counter += 1
+					if type(read) == str and len(read) >= 2: # server information packet
+						data = json.loads(read)
+						if data['op'] == 10:
+							client.heartbeat_interval = data['d']['heartbeat_interval'] / 1000
+							client.ws_ping_thread.start()
+							print('Started ping thread')
+
+						elif data['op'] == 11: # Ping packet -- do not count pings!
+							client.message_counter -= 1
+
+						else:
+							self.ws_recv_callback(data)
 
 				elif item == self.ws_send_queue._reader:
 					while not self.ws_send_queue.empty():
@@ -288,21 +300,8 @@ if __name__ == '__main__':
 
 	# create websocket callback
 	def ws_callback(message):
-		client.message_counter += 1
-
-		if type(message) == str:
-			if len(message) >= 2:
-				data = json.loads(message)
-				if data['op'] == 10:
-					client.heartbeat_interval = data['d']['heartbeat_interval'] / 1000
-					client.ws_ping_thread.start()
-					print('Started ping thread')
-
-				elif data['op'] == 11: # do not count pings!
-					client.message_counter -= 1
-
-		else:
-			pass
+		if message['op'] == 0 and message['t'] == 'MESSAGE_CREATE':
+			print('<%s> %s' % (message['d']['author']['username'], message['d']['content']) )
 
 	client.websocket_received_callback(ws_callback)
 
@@ -339,11 +338,11 @@ if __name__ == '__main__':
 	print(client.send_start_typing('304959901376053248'))
 	time.sleep(1)
 	print(client.send_message('304959901376053248', time.ctime()))
-	time.sleep(1)
+	time.sleep(2)
 	print(client.send_presence_change('online'))
 
-	time.sleep(1)
-	while 1:
+	time.sleep(5)
+	while 0:
 		msg = input('Enter message: ')
 		if msg == 'quit':
 			break
