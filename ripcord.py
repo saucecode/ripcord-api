@@ -8,6 +8,7 @@ class DiscordClient:
 		self.login_url = 'https://discordapp.com/api/v6/auth/login'
 		self.me_url = 'https://discordapp.com/api/v6/users/@me'
 		self.gateway_url = 'https://discordapp.com/api/v6/gateway'
+		self.logout_url = 'https://discordapp.com/api/v6/auth/logout'
 
 		self.ws_gateway_query_params = '/?encoding=json&v=6'
 
@@ -32,6 +33,29 @@ class DiscordClient:
 			self.token = req.json()['token']
 			return True
 		return False
+	
+	def logout(self):
+		""" Attempts to logout.
+		Will the websocket client if opened.
+		"""
+		
+		data = json.dumps(
+			{ 'provider':None, 'token':None }
+		)
+		
+		if self.ws and self.ws.connected:
+			self.ws.close()
+			self.ws_send_queue.put('nosend')
+		
+		req = requests.post(self.logout_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		
+		self.debug = req.text
+		
+		if req.status_code == 204:
+			return True
+		else:
+			return False
+		
 
 	def get_me(self):
 		""" Downloads information about the client.
@@ -74,8 +98,11 @@ class DiscordClient:
 		print('Started websocket thread\n')
 
 	def websocket_loop(self):
-		while 1:
+		while self.ws.connected:
 			readable, writable, executable = select.select( [self.ws, self.ws_send_queue._reader], [], [] )
+			
+			if not self.ws.connected:
+				break
 
 			for item in readable:
 				if item == self.ws:
@@ -83,13 +110,21 @@ class DiscordClient:
 
 				elif item == self.ws_send_queue._reader:
 					self.ws.send( self.ws_send_queue.get() )
+		
+		print('Websocket loop thread exited.')
 
 	def websocket_ping(self):
-		while 1:
+		while self.ws.connected:
 			time.sleep(self.heartbeat_interval)
+			
+			if not self.ws.connected:
+				break
+			
 			ping_packet = json.dumps( {'op':1, 'd':self.message_counter} )
 			self.websocket_send( ping_packet )
 			print('Sent ping: %s' % ping_packet)
+
+		print('Ping thread exited.')
 
 
 	def websocket_send(self, data : bytes):
@@ -122,6 +157,25 @@ class DiscordClient:
 			return True
 		self.debug = req
 		return False
+	
+	def send_presence_change(self, presence : str):
+		""" Sends a presence update.
+		presence should be one of 'idle', 'online', 'dnd', 'invisible'
+		"""
+		
+		data = json.dumps(
+			{'status': presence}
+		)
+		
+		request_url = 'https://discordapp.com/api/v6/users/@me/settings'
+		req = requests.patch(request_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'})
+
+		self.debug = req
+		
+		if req.status_code == 200:
+			return True
+		else:
+			return False
 
 
 if __name__ == '__main__':
@@ -193,6 +247,12 @@ if __name__ == '__main__':
 	))
 	
 	
-	print(client.send_start_typing('304959901376053248'))
-	time.sleep(1)
-	print(client.send_message('304959901376053248', 'Hello, world!'))
+	# print(client.send_start_typing('304959901376053248'))
+	print(client.send_presence_change('idle'))
+	#time.sleep(1)
+	#print(client.send_presence_change('dnd'))
+	time.sleep(3)
+	print(client.logout())
+	print(client.debug)
+	#print(client.send_presence_change('online'))
+	
