@@ -1,6 +1,6 @@
 # ripcord-api
 
-The working project name is `Communicaton Security is Mandatory`.
+The working project name is `Communication Security is Mandatory`.
 
 This project endeavors to reverse engineer as much of the unreleased Discord Client API as possible, and produce a library of functions that lets programmers:
 
