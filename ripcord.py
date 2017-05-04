@@ -9,6 +9,7 @@ class DiscordClient:
 		self.me_url = 'https://discordapp.com/api/v6/users/@me'
 		self.gateway_url = 'https://discordapp.com/api/v6/gateway'
 		self.logout_url = 'https://discordapp.com/api/v6/auth/logout'
+		self.track_url = 'https://discordapp.com/api/v6/track'
 
 		self.ws_gateway_query_params = '/?encoding=json&v=6'
 
@@ -21,7 +22,11 @@ class DiscordClient:
 
 	def login(self, email : str, password : str):
 		""" Attempts to login with the given credentials.
-		Returns true on sucess, and stores the authtoken in self.token """
+		Returns true on sucess, and stores the authtoken in self.token
+
+		Returns:
+			bool: True if successful
+		"""
 
 		data = json.dumps({'email': email, 'password':password}).encode('utf-8')
 
@@ -36,7 +41,10 @@ class DiscordClient:
 
 	def logout(self):
 		""" Attempts to logout.
-		Will the websocket client if opened.
+		Will close the websocket client if opened.
+
+		Returns:
+			bool: True if successful
 		"""
 
 		data = json.dumps(
@@ -59,7 +67,10 @@ class DiscordClient:
 
 	def get_me(self):
 		""" Downloads information about the client.
-		Returns true if successful, and stores this information in a dict in self.me
+		Stores this information in a dict in self.me.
+
+		Returns:
+			bool: True if successful
 		"""
 
 		req = requests.get(self.me_url, headers={**self.headers, 'Authorization':self.token})
@@ -72,7 +83,11 @@ class DiscordClient:
 		return False
 
 	def retrieve_websocket_gateway(self):
-		""" Attempts to get the websocket URL. Returns that URL. """
+		""" Attempts to get the websocket URL.
+
+		Returns:
+			str: The gateway URL.
+		"""
 		req = requests.get(self.gateway_url, headers={**self.headers, 'Authorization':self.token})
 		if req.status_code == 200:
 			data = req.json()
@@ -80,7 +95,11 @@ class DiscordClient:
 		return False
 
 	def download_messages(self, channelid : str, limit=50):
-		""" Downloads messages for a specific channel id. Must have an authtoken. """
+		""" Downloads messages for a specific channel id. Must have an authtoken.
+
+		Returns:
+			list: A list of the most recent messages.
+		"""
 		request_url = 'https://discordapp.com/api/v6/channels/{}/messages?limit={}'.format(channelid, limit)
 		req = requests.get(request_url, headers={**self.headers, 'Authorization':self.token})
 		if req.status_code == 200:
@@ -140,7 +159,11 @@ class DiscordClient:
 		self.ws_recv_callback = callback
 
 	def send_message(self, channelid : str, message : str, tts=False, nonce="123"):
-		""" Sends a message to a specific channel. """
+		""" Sends a message to a specific channel.
+
+		Returns:
+			bool: True if successful
+		"""
 
 		data = json.dumps(
 			{"content": message, "tts":tts, "nonce": nonce}
@@ -154,7 +177,11 @@ class DiscordClient:
 		return req.text
 
 	def send_start_typing(self, channelid : str):
-		""" Sends a signal to start typing to a specific channel. """
+		""" Sends a signal to start typing to a specific channel.
+
+		Returns:
+			bool: True if successful
+		"""
 
 		request_url = 'https://discordapp.com/api/v6/channels/{}/typing'.format(channelid)
 		req = requests.post(request_url, headers={**self.headers, 'Authorization':self.token})
@@ -166,6 +193,9 @@ class DiscordClient:
 	def send_presence_change(self, presence : str):
 		""" Sends a presence update.
 		presence should be one of 'idle', 'online', 'dnd', 'invisible'
+
+		Returns:
+			bool: True if successful
 		"""
 
 		data = json.dumps(
@@ -178,6 +208,28 @@ class DiscordClient:
 		self.debug = req
 
 		if req.status_code == 200:
+			return True
+		else:
+			return False
+
+	def send_game_change(self, gamename : str):
+		""" Send a game change update.
+
+		Returns:
+			bool: True if successful
+		"""
+
+		# TODO FIX ME -- I DON'T WORK
+
+		data = json.dumps(
+			{ 'event':'Launch Game', 'properties':{'Game': gamename}, 'token':self.token }
+		)
+
+		req = requests.post(self.track_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+
+		self.debug = req
+
+		if req.status_code == 204:
 			return True
 		else:
 			return False
@@ -204,7 +256,7 @@ if __name__ == '__main__':
 
 	# create websocket callback
 	def ws_callback(message):
-		print('RECV %s' % message)
+		print('RECV %s\n' % message)
 		client.message_counter += 1
 
 		if type(message) == str:
@@ -255,7 +307,11 @@ if __name__ == '__main__':
 	print(client.send_start_typing('304959901376053248'))
 	time.sleep(1)
 	print(client.send_message('304959901376053248', time.ctime()))
-	print(client.send_presence_change('idle'))
+	time.sleep(1)
+	print(client.send_presence_change('online'))
+	time.sleep(1)
+	print(client.send_game_change('NEKOPARA Vol. 0'))
+	print(client.debug.text)
 	#time.sleep(1)
 	#print(client.send_presence_change('dnd'))
 	time.sleep(8)
