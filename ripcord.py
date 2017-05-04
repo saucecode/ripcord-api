@@ -20,6 +20,13 @@ class DiscordClient:
 
 		self.message_counter = 0
 
+		self.requester = requests.Session()
+
+	def do_request(self, method : str, url : str, data=None, headers={}):
+		resp = self.requester.request(method, url, data=data, headers={**self.headers, **headers})
+		print('%s %s with data %s -- %i\n' % (method, url, data, resp.status_code))
+		return resp
+
 	def login(self, email : str, password : str):
 		""" Attempts to login with the given credentials.
 		Returns true on sucess, and stores the authtoken in self.token
@@ -31,7 +38,7 @@ class DiscordClient:
 		data = json.dumps({'email': email, 'password':password}).encode('utf-8')
 
 		print('Attempting login of', email, ':', '*'*len(password))
-		req = requests.post(self.login_url, data=data, headers={**self.headers, 'Content-Type':'application/json'})
+		req = self.do_request('POST', self.login_url, data=data, headers={'Content-Type':'application/json'})
 		self.debug = req
 
 		if req.status_code == 200:
@@ -55,7 +62,7 @@ class DiscordClient:
 			self.ws.close()
 			self.ws_send_queue.put('nosend')
 
-		req = requests.post(self.logout_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		req = self.do_request('POST', self.logout_url, headers={'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
 
 		self.debug = req.text
 
@@ -73,7 +80,8 @@ class DiscordClient:
 			bool: True if successful
 		"""
 
-		req = requests.get(self.me_url, headers={**self.headers, 'Authorization':self.token})
+		# req = requests.get(self.me_url, headers={**self.headers, 'Authorization':self.token})
+		req = self.do_request('GET', self.me_url, headers={'Authorization':self.token})
 		if req.status_code == 200:
 			data = req.json()
 
@@ -88,7 +96,9 @@ class DiscordClient:
 		Returns:
 			str: The gateway URL.
 		"""
-		req = requests.get(self.gateway_url, headers={**self.headers, 'Authorization':self.token})
+		# req = requests.get(self.gateway_url, headers={**self.headers, 'Authorization':self.token})
+		req = self.do_request('GET', self.gateway_url, headers={'Authorization':self.token})
+
 		if req.status_code == 200:
 			data = req.json()
 			return data['url']
@@ -101,7 +111,8 @@ class DiscordClient:
 			list: A list of the most recent messages.
 		"""
 		request_url = 'https://discordapp.com/api/v6/channels/{}/messages?limit={}'.format(channelid, limit)
-		req = requests.get(request_url, headers={**self.headers, 'Authorization':self.token})
+		# req = requests.get(request_url, headers={**self.headers, 'Authorization':self.token})
+		req = self.do_request('GET', request_url, headers={'Authorization':self.token})
 		if req.status_code == 200:
 			data = req.json()
 			return data
@@ -125,10 +136,24 @@ class DiscordClient:
 
 			for item in readable:
 				if item == self.ws:
-					self.ws_recv_callback(self.ws.recv())
+					read = self.ws.recv()
+					try:
+						print('RECEIVED %s\n' % json.dumps(json.loads(read), indent=4, separators=(',', ': ')))
+					except:
+						print('RECEIVED %s\n' % read)
+
+					self.ws_recv_callback(read)
 
 				elif item == self.ws_send_queue._reader:
-					self.ws.send( self.ws_send_queue.get() )
+					while not self.ws_send_queue.empty():
+						read = self.ws_send_queue.get()
+
+						try:
+							print('SENDING  %s\n' % json.dumps(json.loads(read), indent=4, separators=(',', ': ')))
+						except:
+							print('SENDING  %s\n' % read)
+
+						self.ws.send( read )
 
 		print('Websocket loop thread exited.')
 
@@ -146,7 +171,7 @@ class DiscordClient:
 
 				ping_packet = json.dumps( {'op':1, 'd':self.message_counter} )
 				self.websocket_send( ping_packet )
-				print('Sent ping: %s' % ping_packet)
+				print('Sent ping.')
 
 		print('Ping thread exited.')
 
@@ -170,11 +195,15 @@ class DiscordClient:
 		)
 
 		request_url = 'https://discordapp.com/api/v6/channels/{}/messages'.format(channelid)
-		req = requests.post(request_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		# req = requests.post(request_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		req = self.do_request('POST', request_url, headers={'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
 		if req.status_code == 200:
-			data = req.json()
-			return data
-		return req.text
+			self.debug = req.json()
+
+			return True
+
+		self.debug = req.text
+		return False
 
 	def send_start_typing(self, channelid : str):
 		""" Sends a signal to start typing to a specific channel.
@@ -184,7 +213,8 @@ class DiscordClient:
 		"""
 
 		request_url = 'https://discordapp.com/api/v6/channels/{}/typing'.format(channelid)
-		req = requests.post(request_url, headers={**self.headers, 'Authorization':self.token})
+		# req = requests.post(request_url, headers={**self.headers, 'Authorization':self.token})
+		req = self.do_request('POST', request_url, headers={'Authorization':self.token})
 		if req.status_code == 204:
 			return True
 		self.debug = req
@@ -203,7 +233,8 @@ class DiscordClient:
 		)
 
 		request_url = 'https://discordapp.com/api/v6/users/@me/settings'
-		req = requests.patch(request_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		#req = requests.patch(request_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		req = self.do_request('PATCH', request_url, headers={'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
 
 		self.debug = req
 
@@ -225,7 +256,8 @@ class DiscordClient:
 			{ 'event':'Launch Game', 'properties':{'Game': gamename}, 'token':self.token }
 		)
 
-		req = requests.post(self.track_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		# req = requests.post(self.track_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		req = self.do_request('POST', self.track_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
 
 		self.debug = req
 
@@ -248,7 +280,7 @@ if __name__ == '__main__':
 
 	# download @me data
 	print(client.get_me())
-	print(client.me)
+	# print(client.me)
 
 	# get the gateway
 	websocket_url = client.retrieve_websocket_gateway()
@@ -256,18 +288,18 @@ if __name__ == '__main__':
 
 	# create websocket callback
 	def ws_callback(message):
-		print('RECV %s\n' % message)
 		client.message_counter += 1
 
 		if type(message) == str:
-			data = json.loads(message)
-			if data['op'] == 10:
-				client.heartbeat_interval = data['d']['heartbeat_interval'] / 1000
-				client.ws_ping_thread.start()
-				print('Started ping thread')
+			if len(message) >= 2:
+				data = json.loads(message)
+				if data['op'] == 10:
+					client.heartbeat_interval = data['d']['heartbeat_interval'] / 1000
+					client.ws_ping_thread.start()
+					print('Started ping thread')
 
-			elif data['op'] == 11: # do not count pings!
-				client.message_counter -= 1
+				elif data['op'] == 11: # do not count pings!
+					client.message_counter -= 1
 
 		else:
 			pass
@@ -309,12 +341,20 @@ if __name__ == '__main__':
 	print(client.send_message('304959901376053248', time.ctime()))
 	time.sleep(1)
 	print(client.send_presence_change('online'))
+
 	time.sleep(1)
-	print(client.send_game_change('NEKOPARA Vol. 0'))
-	print(client.debug.text)
-	#time.sleep(1)
-	#print(client.send_presence_change('dnd'))
-	time.sleep(8)
+	while 1:
+		msg = input('Enter message: ')
+		if msg == 'quit':
+			break
+		client.send_message('304959901376053248', msg)
+
+	#time.sleep(3)
+	#print(client.send_game_change('NEKOPARA Vol. 0'))
+	#print(client.debug.text)
+	#time.sleep(3)
+	#print(client.send_presence_change('online'))
+	#time.sleep(60)
 	print(client.logout())
 	print(client.debug)
 	#print(client.send_presence_change('online'))
