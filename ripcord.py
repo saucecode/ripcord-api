@@ -22,9 +22,11 @@ class DiscordClient:
 
 		self.requester = requests.Session()
 
+		self.print_traffic = False
+
 	def do_request(self, method : str, url : str, data=None, headers={}):
 		resp = self.requester.request(method, url, data=data, headers={**self.headers, **headers})
-		print('%s %s with data %s -- %i\n' % (method, url, data, resp.status_code))
+		if self.print_traffic: print('%s %s with data %s -- %i\n' % (method, url, data, resp.status_code))
 		return resp
 
 	def login(self, email : str, password : str):
@@ -137,17 +139,19 @@ class DiscordClient:
 			for item in readable:
 				if item == self.ws:
 					read = self.ws.recv()
-					try:
-						print('RECEIVED %s\n' % json.dumps(json.loads(read), indent=4, separators=(',', ': ')))
-					except:
-						print('RECEIVED %s\n' % read)
+
+					if self.print_traffic:
+						try:
+							print('RECEIVED %s\n' % json.dumps(json.loads(read), indent=4, separators=(',', ': ')))
+						except:
+							print('RECEIVED %s\n' % read)
 
 					self.message_counter += 1
 					if type(read) == str and len(read) >= 2: # server information packet
 						data = json.loads(read)
 						if data['op'] == 10:
-							client.heartbeat_interval = data['d']['heartbeat_interval'] / 1000
-							client.ws_ping_thread.start()
+							self.heartbeat_interval = data['d']['heartbeat_interval'] / 1000
+							self.ws_ping_thread.start()
 							print('Started ping thread')
 
 						elif data['op'] == 11: # Ping packet -- do not count pings!
@@ -160,10 +164,11 @@ class DiscordClient:
 					while not self.ws_send_queue.empty():
 						read = self.ws_send_queue.get()
 
-						try:
-							print('SENDING  %s\n' % json.dumps(json.loads(read), indent=4, separators=(',', ': ')))
-						except:
-							print('SENDING  %s\n' % read)
+						if self.print_traffic:
+							try:
+								print('SENDING  %s\n' % json.dumps(json.loads(read), indent=4, separators=(',', ': ')))
+							except:
+								print('SENDING  %s\n' % read)
 
 						self.ws.send( read )
 
@@ -278,21 +283,42 @@ class DiscordClient:
 		else:
 			return False
 
+	def retrieve_server_channels(self, serverid : str):
+		""" Retrieve a list of channels in the server.
+
+		This list includes channels that the user is not a part of.
+		Attempting to run download_messages on these channels yields a 403 Forbidden error.
+
+		Returns:
+			list: List of channels or None if request fails.
+		"""
+		req = self.do_request('GET', 'https://discordapp.com/api/v6/guilds/{}/channels'.format(serverid), headers={**self.headers, 'Authorization':self.token})
+		self.debug = req
+
+		if req.status_code == 200:
+			return req.json()
+
+		return None
+
 
 if __name__ == '__main__':
+	import sys
+
 	client = DiscordClient()
 
 	with open('credentials','r') as f:
 		email,password = json.load(f)
 
 	# do login
-	print(client.login( email, password ))
-	print(client.debug.text)
-	print(client.token)
+	if client.login( email, password ):
+		print('Login successful - Authtoken: %s' % client.token)
+	else:
+		print('Failed to login.')
+		sys.exit(0)
 
 	# download @me data
-	print(client.get_me())
-	# print(client.me)
+	client.get_me()
+	print(client.me)
 
 	# get the gateway
 	websocket_url = client.retrieve_websocket_gateway()
@@ -334,26 +360,25 @@ if __name__ == '__main__':
 		{"op":4,"d":{"guild_id":None,"channel_id":None,"self_mute":True,"self_deaf":False,"self_video":False}}
 	))
 
+	# start making requests!
+	serverid = '181226314810916865'
 
-	print(client.send_start_typing('304959901376053248'))
+	# print channels
+	channels = client.retrieve_server_channels(serverid)
+	print('Found %i channels:' % len(channels))
+	for chan in channels:
+		if chan['type'] == 0: # regular channel
+			print( '\t(%s) %s: %s' % (chan['id'], chan['name'], chan['topic']) )
+
+		elif chan['type'] == 2:
+			print( '\t(%s) %s %ik [Voice Channel]' % (chan['id'], chan['name'], int(chan['bitrate']/1000)) )
+	print('')
+
+	client.send_start_typing('304959901376053248')
 	time.sleep(1)
-	print(client.send_message('304959901376053248', time.ctime()))
+	client.send_message('304959901376053248', time.ctime())
+
 	time.sleep(2)
-	print(client.send_presence_change('online'))
 
-	time.sleep(5)
-	while 0:
-		msg = input('Enter message: ')
-		if msg == 'quit':
-			break
-		client.send_message('304959901376053248', msg)
-
-	#time.sleep(3)
-	#print(client.send_game_change('NEKOPARA Vol. 0'))
-	#print(client.debug.text)
-	#time.sleep(3)
-	#print(client.send_presence_change('online'))
-	#time.sleep(60)
-	print(client.logout())
-	print(client.debug)
-	#print(client.send_presence_change('online'))
+	print('Signing out...')
+	client.logout()
