@@ -1,12 +1,12 @@
 # ripcord-api
 
-The working project name is `Communication Security is Mandatory`.
-
 This project endeavors to reverse engineer as much of the unreleased Discord Client API as possible, and produce a library of functions that lets programmers:
 
  - Write a better, more fully featured, and open source Discord client.
  - Write bots which can respond to voice commands.
  - Implement optional E2EE in a Discord Client.
+
+[Proof of concept](https://www.youtube.com/watch?v=bQk-ZJPecSc) - Part of this project was ported to Java to write a small standalone client, just to show that it was possible.
 
 Currently implemented/figured out functions:
 
@@ -41,3 +41,6 @@ Changes the status of the user. `presence` can be one of `idle`, `online`, `dnd`
 
 `retrieve_server_channels(serverid)`  
 Retrieves a list of channels in the server given by `serverid`. This will return ALL channels that exist, including voice channels, and channels that you are not a member of.
+
+
+The working project name is `Communication Security is Mandatory`.
