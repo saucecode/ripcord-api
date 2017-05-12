@@ -12,6 +12,7 @@ class DiscordClient:
 		self.gateway_url = 'https://discordapp.com/api/v6/gateway'
 		self.logout_url = 'https://discordapp.com/api/v6/auth/logout'
 		self.track_url = 'https://discordapp.com/api/v6/track'
+		self.members_url = 'https://discordapp.com/api/v6/guilds/{}/members'
 
 		self.ws_gateway_query_params = '/?encoding=json&v=6'
 
@@ -26,8 +27,8 @@ class DiscordClient:
 
 		self.print_traffic = False
 
-	def do_request(self, method : str, url : str, data=None, headers={}):
-		resp = self.requester.request(method, url, data=data, headers={**self.headers, **headers})
+	def do_request(self, method : str, url : str, data=None, headers={}, params=None):
+		resp = self.requester.request(method, url, data=data, headers={**self.headers, **headers}, params=params)
 		if self.print_traffic: print('%s %s with data %s -- %i\n' % (method, url, data, resp.status_code))
 		return resp
 
@@ -315,6 +316,21 @@ class DiscordClient:
 
 		return None
 
+	def retrieve_server_members(self, serverid : str, limit=1000):
+		""" Retrieves a list of members in the server given by serverid.
+
+		Returns:
+			list: List of members, up to limit.
+		"""
+		query_params = {'limit': limit}
+		req = self.do_request('GET', self.members_url.format(serverid), headers={**self.headers, 'Authorization':self.token}, params=query_params)
+		self.debug = req
+
+		if req.status_code == 200:
+			return req.json()
+
+		return None
+
 
 if __name__ == '__main__':
 	import sys
@@ -382,15 +398,25 @@ if __name__ == '__main__':
 	# print channels
 	for server in servers:
 		serverid = server['id']
+		server_members = client.retrieve_server_members(serverid)
+
 		print('Server:', server['name'], 'ID:', serverid)
+
 		channels = client.retrieve_server_channels(serverid)
+
 		print('Found %i channels:' % len(channels))
+
 		for chan in channels:
 			if chan['type'] == 0: # regular channel
 				print( '\t(%s) %s: %s' % (chan['id'], chan['name'], chan['topic']) )
 
 			elif chan['type'] == 2:
 				print( '\t(%s) %s %ik [Voice Channel]' % (chan['id'], chan['name'], int(chan['bitrate']/1000)) )
+
+		print('\nThis server has %i members:' % len(server_members))
+		for member in server_members:
+			print('\t%s: (%s) %s' % (member['user']['id'], member['user']['username'], member['nick'] if 'nick' in member else member['user']['username']) )
+
 		print('')
 
 	# client.send_start_typing('304959901376053248')

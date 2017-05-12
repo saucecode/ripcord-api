@@ -45,5 +45,8 @@ Retrieves a list of all the servers the current user is a member of.
 `retrieve_server_channels(serverid)`  
 Retrieves a list of channels in the server given by `serverid`. This will return ALL channels that exist, including voice channels, and channels that you are not a member of.
 
+`retrieve_server_members(serverid)`  
+Retrieves a list of members in the server given by `serverid`. Members who have a special nickname in `serverid` will have a 'nick' field.
+
 
 The working project name is `Communication Security is Mandatory`.
