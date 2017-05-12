@@ -7,6 +7,8 @@ class DiscordClient:
 	def __init__(self):
 		self.login_url = 'https://discordapp.com/api/v6/auth/login'
 		self.me_url = 'https://discordapp.com/api/v6/users/@me'
+		self.settings_url = 'https://discordapp.com/api/v6/users/@me/settings'
+		self.guilds_url = 'https://discordapp.com/api/v6/users/@me/guilds'
 		self.gateway_url = 'https://discordapp.com/api/v6/gateway'
 		self.logout_url = 'https://discordapp.com/api/v6/auth/logout'
 		self.track_url = 'https://discordapp.com/api/v6/track'
@@ -249,9 +251,8 @@ class DiscordClient:
 			{'status': presence}
 		)
 
-		request_url = 'https://discordapp.com/api/v6/users/@me/settings'
 		#req = requests.patch(request_url, headers={**self.headers, 'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
-		req = self.do_request('PATCH', request_url, headers={'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
+		req = self.do_request('PATCH', self.settings_url, headers={'Authorization':self.token, 'Content-Type':'application/json'}, data=data)
 
 		self.debug = req
 
@@ -282,6 +283,20 @@ class DiscordClient:
 			return True
 		else:
 			return False
+
+	def retrieve_servers(self):
+		""" Retrieve a list of servers user is connected to.
+
+		Returns:
+			list: List of servers.
+		"""
+		req = self.do_request('GET', self.guilds_url, headers={**self.headers, 'Authorization':self.token})
+		self.debug = req
+
+		if req.status_code == 200:
+			return req.json()
+
+		return None
 
 	def retrieve_server_channels(self, serverid : str):
 		""" Retrieve a list of channels in the server.
@@ -360,23 +375,27 @@ if __name__ == '__main__':
 		{"op":4,"d":{"guild_id":None,"channel_id":None,"self_mute":True,"self_deaf":False,"self_video":False}}
 	))
 
-	# start making requests!
-	serverid = '181226314810916865'
+	# download servers
+
+	servers = client.retrieve_servers()
 
 	# print channels
-	channels = client.retrieve_server_channels(serverid)
-	print('Found %i channels:' % len(channels))
-	for chan in channels:
-		if chan['type'] == 0: # regular channel
-			print( '\t(%s) %s: %s' % (chan['id'], chan['name'], chan['topic']) )
+	for server in servers:
+		serverid = server['id']
+		print('Server:', server['name'], 'ID:', serverid)
+		channels = client.retrieve_server_channels(serverid)
+		print('Found %i channels:' % len(channels))
+		for chan in channels:
+			if chan['type'] == 0: # regular channel
+				print( '\t(%s) %s: %s' % (chan['id'], chan['name'], chan['topic']) )
 
-		elif chan['type'] == 2:
-			print( '\t(%s) %s %ik [Voice Channel]' % (chan['id'], chan['name'], int(chan['bitrate']/1000)) )
-	print('')
+			elif chan['type'] == 2:
+				print( '\t(%s) %s %ik [Voice Channel]' % (chan['id'], chan['name'], int(chan['bitrate']/1000)) )
+		print('')
 
-	client.send_start_typing('304959901376053248')
-	time.sleep(1)
-	client.send_message('304959901376053248', time.ctime())
+	# client.send_start_typing('304959901376053248')
+	# time.sleep(1)
+	# client.send_message('304959901376053248', time.ctime())
 
 	time.sleep(2)
 

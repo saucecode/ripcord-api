@@ -39,6 +39,9 @@ Sends a signal to show that the user is typing in the channel given by `channeli
 `send_presence_change(presence)`  
 Changes the status of the user. `presence` can be one of `idle`, `online`, `dnd`, `invisible`.
 
+`retrieve_servers()`  
+Retrieves a list of all the servers the current user is a member of.
+
 `retrieve_server_channels(serverid)`  
 Retrieves a list of channels in the server given by `serverid`. This will return ALL channels that exist, including voice channels, and channels that you are not a member of.
 
