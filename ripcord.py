@@ -248,6 +248,18 @@ class DiscordClient:
 			bool: True if successful
 		"""
 
+		data = json.dumps({
+			'op': 3,
+			'd': {
+				'status': presence,
+				'since': 0,
+				'game': None,
+				'afk': False
+			}
+		})
+
+		self.websocket_send(data)
+
 		data = json.dumps(
 			{'status': presence}
 		)
@@ -422,6 +434,15 @@ if __name__ == '__main__':
 	# client.send_start_typing('304959901376053248')
 	# time.sleep(1)
 	# client.send_message('304959901376053248', time.ctime())
+
+	time.sleep(2)
+	print(client.send_presence_change('idle'))
+	time.sleep(2)
+	print(client.send_presence_change('dnd'))
+	time.sleep(2)
+	print(client.send_presence_change('invisible'))
+	time.sleep(2)
+	print(client.send_presence_change('online'))
 
 	time.sleep(2)
 
