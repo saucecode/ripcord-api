@@ -301,7 +301,7 @@ class DiscordClient:
 
 	def send_view_server(self, serverid : str):
 		""" Send a server-viewing update (OP 12) packet.
-		By sending this, the client will receive START_TYPING packets from the users in the channel.
+		By sending this, the client will receive TYPING_START packets from the users in the channel.
 		Other effects are not known.
 		"""
 
@@ -452,7 +452,7 @@ if __name__ == '__main__':
 	client.send_message('304959901376053248', time.ctime())
 	'''
 
-	
+
 	# Tests the presence update by cycling through all of them
 	time.sleep(2)
 	print(client.send_presence_change('idle'))
@@ -463,7 +463,7 @@ if __name__ == '__main__':
 	time.sleep(2)
 	print(client.send_presence_change('online'))
 
-	# Tests server-viewing packets -- client should receive START_TYPING packets from the server given, after sending this packet
+	# Tests server-viewing packets -- client should receive TYPING_START packets from the server given, after sending this packet
 	print('sending OP 12')
 	client.print_traffic = True
 	client.send_view_server('181226314810916865')
