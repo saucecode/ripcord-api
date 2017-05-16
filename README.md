@@ -8,7 +8,7 @@ This project endeavors to reverse engineer as much of the unreleased Discord Cli
 
 [Proof of concept](https://www.youtube.com/watch?v=bQk-ZJPecSc) - Part of this project was ported to Java to write a small standalone client, just to show that it was possible.
 
-Currently implemented/figured out functions:
+## Currently implemented/figured out functions
 
 These are functions of `DiscordClient`.
 
@@ -38,6 +38,9 @@ Sends a signal to show that the user is typing in the channel given by `channeli
 
 `send_presence_change(presence)`  
 Changes the status of the user. `presence` can be one of `idle`, `online`, `dnd`, `invisible`.
+
+`send_view_server(serverid)`  
+Sends a (OP 12) signal declaring which server you are looking at. You will start receiving TYPING_START packets from users in these servers.
 
 `retrieve_servers()`  
 Retrieves a list of all the servers the current user is a member of.

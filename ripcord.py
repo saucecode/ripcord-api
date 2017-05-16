@@ -25,6 +25,8 @@ class DiscordClient:
 
 		self.requester = requests.Session()
 
+		self.servers_viewing = []
+
 		self.print_traffic = False
 
 	def do_request(self, method : str, url : str, data=None, headers={}, params=None):
@@ -297,6 +299,18 @@ class DiscordClient:
 		else:
 			return False
 
+	def send_view_server(self, serverid : str):
+		""" Send a server-viewing update (OP 12) packet.
+		By sending this, the client will receive START_TYPING packets from the users in the channel.
+		Other effects are not known.
+		"""
+
+		if not serverid in self.servers_viewing:
+			self.servers_viewing.append(serverid)
+
+		data = json.dumps({'op': 12, 'd':self.servers_viewing})
+		self.websocket_send(data)
+
 	def retrieve_servers(self):
 		""" Retrieve a list of servers user is connected to.
 
@@ -431,10 +445,15 @@ if __name__ == '__main__':
 
 		print('')
 
-	# client.send_start_typing('304959901376053248')
-	# time.sleep(1)
-	# client.send_message('304959901376053248', time.ctime())
+	'''
+	# Tests sending of start-typing and message requests
+	client.send_start_typing('304959901376053248')
+	time.sleep(1)
+	client.send_message('304959901376053248', time.ctime())
+	'''
 
+	
+	# Tests the presence update by cycling through all of them
 	time.sleep(2)
 	print(client.send_presence_change('idle'))
 	time.sleep(2)
@@ -444,7 +463,12 @@ if __name__ == '__main__':
 	time.sleep(2)
 	print(client.send_presence_change('online'))
 
-	time.sleep(2)
+	# Tests server-viewing packets -- client should receive START_TYPING packets from the server given, after sending this packet
+	print('sending OP 12')
+	client.print_traffic = True
+	client.send_view_server('181226314810916865')
+
+	time.sleep(12)
 
 	print('Signing out...')
 	client.logout()
