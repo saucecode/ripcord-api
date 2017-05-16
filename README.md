@@ -6,6 +6,8 @@ This project endeavors to reverse engineer as much of the unreleased Discord Cli
  - Write bots which can respond to voice commands.
  - Implement optional E2EE in a Discord Client.
 
+Also because message deletion is stupid.
+
 [Proof of concept](https://www.youtube.com/watch?v=bQk-ZJPecSc) - Part of this project was ported to Java to write a small standalone client, just to show that it was possible.
 
 ## Currently implemented/figured out functions
