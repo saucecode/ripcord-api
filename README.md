@@ -1,5 +1,16 @@
 # ripcord-api
 
+This is old, unnecessary, and probably out of date. Do not use it, except perhaps as a reference for your own work.
+
+An unofficial list of discord API libraries can be found [here](https://discordapi.com/unofficial/libs.html). The majority of these libraries can be used to create Discord self-bots<sup>1</sup> (or can be easily modified to do so<sup>2</sup>), and eliminates the need for this library.
+
+Below is the original README.md.
+
+[1] *self-bot* meaning a programmable Discord bot masquerading as a real Discord user.  
+[2] I did it with JDA.
+
+-----
+
 This project endeavors to reverse engineer as much of the unreleased Discord Client API as possible, and produce a library of functions that lets programmers:
 
  - Write a better, more fully featured, and open source Discord client.
